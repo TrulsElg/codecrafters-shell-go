@@ -50,7 +50,7 @@ func main() {
 				if slices.Contains(builtinCommands, command) {
 					fmt.Fprintln(os.Stdout, command+" is a shell builtin")
 				} else {
-					fmt.Fprintln(os.Stdout, command+": command not found")
+					fmt.Fprintln(os.Stdout, command+": not found")
 				}
 			}
 		default:
