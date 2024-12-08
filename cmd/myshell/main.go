@@ -48,6 +48,7 @@ func main() {
 			}
 			fmt.Println(dir)
 		case "cd":
+			// This approach works for relative and absolute paths
 			err := os.Chdir(words[1])
 			if err != nil {
 				fmt.Println("cd: " + words[1] + ": No such file or directory")
