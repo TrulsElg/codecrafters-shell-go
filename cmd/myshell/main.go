@@ -27,7 +27,7 @@ func main() {
 		input = strings.TrimSuffix(input, "\n")
 		words := strings.Split(input, " ")
 
-		if len(words) == 0 {
+		if len(words) == 1 && words[0] == "" {
 			continue
 		}
 		command := words[0]
