@@ -47,6 +47,11 @@ func main() {
 			if err != nil {
 			}
 			fmt.Println(dir)
+		case "cd":
+			err := os.Chdir(words[1])
+			if err != nil {
+				fmt.Println("cd: " + words[1] + ": No such file or directory")
+			}
 		case "type":
 			if len(words) == 1 {
 				fmt.Fprintln(os.Stdout, "type: missing argument")
@@ -55,6 +60,7 @@ func main() {
 					"exit",
 					"echo",
 					"pwd",
+					"cd",
 					"type",
 				}
 				command := words[1]
