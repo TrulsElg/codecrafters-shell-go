@@ -2,9 +2,9 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"slices"
 	"strconv"
 	"strings"
@@ -12,34 +12,6 @@ import (
 
 // Ensures gofmt doesn't remove the "fmt" import in stage 1 (feel free to remove this!)
 var _ = fmt.Fprint
-
-func checkPathForProgram(path string, command string) (commandPath string, err error) {
-	directories := strings.Split(path, ":")
-
-	for _, dir := range directories {
-		//fmt.Println(dir)
-
-		f, err := os.Open(dir)
-		if err != nil {
-			continue
-			//fmt.Println(err)
-		}
-
-		files, err := f.Readdirnames(0)
-		f.Close()
-		if err != nil {
-			fmt.Println(err)
-		}
-		for _, file := range files {
-			if file == command {
-				return dir + "/" + command, nil
-			}
-		}
-
-	}
-
-	return "", errors.New(command + ": not found")
-}
 
 func main() {
 	for {
@@ -53,7 +25,7 @@ func main() {
 		}
 
 		input = strings.TrimSuffix(input, "\n")
-		words := strings.Fields(input)
+		words := strings.Split(input, " ")
 
 		if len(words) == 0 {
 			continue
@@ -82,14 +54,27 @@ func main() {
 				command := words[1]
 				if slices.Contains(builtinCommands, command) {
 					fmt.Fprintln(os.Stdout, command+" is a shell builtin")
-				} else if commandPath, err := checkPathForProgram(os.Getenv("PATH"), command); err == nil {
+				} else if commandPath, err := exec.LookPath(command); err == nil {
 					fmt.Fprintln(os.Stdout, command+" is "+commandPath)
 				} else {
 					fmt.Fprintln(os.Stdout, command+": not found")
 				}
 			}
 		default:
-			fmt.Fprintln(os.Stdout, command+": command not found")
+			_, err := exec.LookPath(command)
+			if err != nil {
+				fmt.Fprintln(os.Stdout, command+": command not found")
+			} else {
+				cmd := exec.Command(command, words[1:]...)
+				cmd.Stdout = os.Stdout
+				cmd.Stderr = os.Stderr
+
+				err := cmd.Run()
+				if err != nil {
+					//fmt.Fprintln(os.Stderr, err)
+				}
+			}
+
 		}
 	}
 
