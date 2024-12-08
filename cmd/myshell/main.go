@@ -42,6 +42,11 @@ func main() {
 			}
 		case "echo":
 			fmt.Println(strings.Join(words[1:], " "))
+		case "pwd":
+			dir, err := os.Getwd()
+			if err != nil {
+			}
+			fmt.Println(dir)
 		case "type":
 			if len(words) == 1 {
 				fmt.Fprintln(os.Stdout, "type: missing argument")
@@ -49,6 +54,7 @@ func main() {
 				builtinCommands := []string{
 					"exit",
 					"echo",
+					"pwd",
 					"type",
 				}
 				command := words[1]
