@@ -49,7 +49,23 @@ func main() {
 			fmt.Println(dir)
 		case "cd":
 			// This approach works for relative and absolute paths
-			err := os.Chdir(words[1])
+			dir := ""
+			switch len(words[1:]) {
+			case 0:
+				dir = os.Getenv("HOME")
+			case 1:
+				dir = words[1]
+				if dir[0] == '~' && len(dir) > 1 {
+					dir = os.Getenv("HOME") + dir[1:]
+				} else if dir[0] == '~' {
+					dir = os.Getenv("HOME")
+				}
+			default:
+				fmt.Println("cd: too many arguments")
+				continue
+			}
+
+			err := os.Chdir(dir)
 			if err != nil {
 				fmt.Println("cd: " + words[1] + ": No such file or directory")
 			}
