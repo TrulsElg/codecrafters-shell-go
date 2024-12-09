@@ -24,24 +24,37 @@ func main() {
 			os.Exit(1)
 		}
 
-		input = strings.TrimSuffix(input, "\n")
-		words := strings.Split(input, " ")
+		s := strings.Trim(input, "\r\n")
+		var tokens []string
+		for {
+			start := strings.Index(s, "'")
+			if start == -1 {
+				tokens = append(tokens, strings.Fields(s)...)
+				break
+			}
+			tokens = append(tokens, strings.Fields(s[:start])...)
+			s = s[start+1:]
+			end := strings.Index(s, "'")
+			token := s[:end]
+			tokens = append(tokens, token)
+			s = s[end+1:]
+		}
 
-		if len(words) == 1 && words[0] == "" {
+		if len(tokens) == 1 && tokens[0] == "" {
 			continue
 		}
-		command := words[0]
+		command := tokens[0]
 
 		switch command {
 		case "exit":
-			if len(words) == 1 {
+			if len(tokens) == 1 {
 				os.Exit(0)
 			}
-			if exitCode, err := strconv.ParseInt(words[1], 10, 64); err == nil && words[0] == "exit" {
+			if exitCode, err := strconv.ParseInt(tokens[1], 10, 64); err == nil && tokens[0] == "exit" {
 				os.Exit(int(exitCode))
 			}
 		case "echo":
-			fmt.Println(strings.Join(words[1:], " "))
+			fmt.Println(strings.Join(tokens[1:], " "))
 		case "pwd":
 			dir, err := os.Getwd()
 			if err != nil {
@@ -50,11 +63,11 @@ func main() {
 		case "cd":
 			// This approach works for relative and absolute paths
 			dir := ""
-			switch len(words[1:]) {
+			switch len(tokens[1:]) {
 			case 0:
 				dir = os.Getenv("HOME")
 			case 1:
-				dir = words[1]
+				dir = tokens[1]
 				if dir[0] == '~' && len(dir) > 1 {
 					dir = os.Getenv("HOME") + dir[1:]
 				} else if dir[0] == '~' {
@@ -67,10 +80,10 @@ func main() {
 
 			err := os.Chdir(dir)
 			if err != nil {
-				fmt.Println("cd: " + words[1] + ": No such file or directory")
+				fmt.Println("cd: " + tokens[1] + ": No such file or directory")
 			}
 		case "type":
-			if len(words) == 1 {
+			if len(tokens) == 1 {
 				fmt.Fprintln(os.Stdout, "type: missing argument")
 			} else {
 				builtinCommands := []string{
@@ -80,7 +93,7 @@ func main() {
 					"cd",
 					"type",
 				}
-				command := words[1]
+				command := tokens[1]
 				if slices.Contains(builtinCommands, command) {
 					fmt.Fprintln(os.Stdout, command+" is a shell builtin")
 				} else if commandPath, err := exec.LookPath(command); err == nil {
@@ -94,7 +107,7 @@ func main() {
 			if err != nil {
 				fmt.Fprintln(os.Stdout, command+": command not found")
 			} else {
-				cmd := exec.Command(command, words[1:]...)
+				cmd := exec.Command(command, tokens[1:]...)
 				cmd.Stdout = os.Stdout
 				cmd.Stderr = os.Stderr
 
