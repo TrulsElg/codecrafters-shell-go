@@ -206,11 +206,11 @@ func main() {
 				command := tokens[1]
 
 				if slices.Contains(builtinCommands, command) {
-					fmt.Fprintln(outputWriter, os.Stdout, command+" is a shell builtin")
+					fmt.Fprintln(outputWriter, command+" is a shell builtin")
 				} else if commandPath, err := exec.LookPath(command); err == nil {
-					fmt.Fprintln(outputWriter, os.Stdout, command+" is "+commandPath)
+					fmt.Fprintln(outputWriter, command+" is "+commandPath)
 				} else {
-					fmt.Fprintln(outputWriter, os.Stdout, command+": not found")
+					fmt.Fprintln(outputWriter, command+": not found")
 				}
 
 				if outputFile != nil {
