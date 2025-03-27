@@ -23,34 +23,39 @@ func parseTokens(input string) ([]string, error) {
 	for i := 0; i < len(input); i++ {
 		ch := input[i]
 
-		if !inSingleQuote && !inDoubleQuote && escapeNext {
+		if inSingleQuote {
+			if ch == '\'' {
+				inSingleQuote = false
+			} else {
+				current.WriteByte(ch) // everything is literal
+			}
+			continue
+		}
+
+		if inDoubleQuote {
+			if ch == '"' {
+				inDoubleQuote = false
+			} else {
+				current.WriteByte(ch) // no escape processing for now
+			}
+			continue
+		}
+
+		if escapeNext {
 			current.WriteByte(ch)
 			escapeNext = false
 			continue
 		}
 
-		if !inSingleQuote && !inDoubleQuote && ch == '\\' {
-			escapeNext = true
-			continue
-		}
-
 		switch ch {
+		case '\\':
+			escapeNext = true
 		case '\'':
-			if !inDoubleQuote {
-				inSingleQuote = !inSingleQuote
-			} else {
-				current.WriteByte(ch)
-			}
+			inSingleQuote = true
 		case '"':
-			if !inSingleQuote {
-				inDoubleQuote = !inDoubleQuote
-			} else {
-				current.WriteByte(ch)
-			}
+			inDoubleQuote = true
 		case ' ', '\t':
-			if inSingleQuote || inDoubleQuote {
-				current.WriteByte(ch)
-			} else if current.Len() > 0 {
+			if current.Len() > 0 {
 				tokens = append(tokens, current.String())
 				current.Reset()
 			}
