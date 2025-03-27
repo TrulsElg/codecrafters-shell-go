@@ -13,6 +13,64 @@ import (
 // Ensures gofmt doesn't remove the "fmt" import in stage 1 (feel free to remove this!)
 var _ = fmt.Fprint
 
+func parseTokens(input string) ([]string, error) {
+	var tokens []string
+	var current strings.Builder
+	inSingleQuote := false
+	inDoubleQuote := false
+	escapeNext := false
+
+	for i := 0; i < len(input); i++ {
+		ch := input[i]
+
+		if !inSingleQuote && !inDoubleQuote && escapeNext {
+			current.WriteByte(ch)
+			escapeNext = false
+			continue
+		}
+
+		if !inSingleQuote && !inDoubleQuote && ch == '\\' {
+			escapeNext = true
+			continue
+		}
+
+		switch ch {
+		case '\'':
+			if !inDoubleQuote {
+				inSingleQuote = !inSingleQuote
+			} else {
+				current.WriteByte(ch)
+			}
+		case '"':
+			if !inSingleQuote {
+				inDoubleQuote = !inDoubleQuote
+			} else {
+				current.WriteByte(ch)
+			}
+		case ' ', '\t':
+			if inSingleQuote || inDoubleQuote {
+				current.WriteByte(ch)
+			} else if current.Len() > 0 {
+				tokens = append(tokens, current.String())
+				current.Reset()
+			}
+		default:
+			current.WriteByte(ch)
+		}
+	}
+
+	if escapeNext {
+		return nil, fmt.Errorf("unexpected end of input after backslash")
+	}
+	if inSingleQuote || inDoubleQuote {
+		return nil, fmt.Errorf("unclosed quote")
+	}
+	if current.Len() > 0 {
+		tokens = append(tokens, current.String())
+	}
+	return tokens, nil
+}
+
 func main() {
 	for {
 		fmt.Fprint(os.Stdout, "$ ")
@@ -24,21 +82,11 @@ func main() {
 			os.Exit(1)
 		}
 
-		s := strings.Trim(input, "\r\n")
-		var tokens []string
-		for {
-			start := strings.IndexAny(s, "'\"")
-			if start == -1 {
-				tokens = append(tokens, strings.Fields(s)...)
-				break
-			}
-			indexCharacter := s[start]
-			tokens = append(tokens, strings.Fields(s[:start])...)
-			s = s[start+1:]
-			end := strings.IndexByte(s, indexCharacter)
-			token := s[:end]
-			tokens = append(tokens, token)
-			s = s[end+1:]
+		// Parse tokens + handle quoting and escaping
+		tokens, err := parseTokens(strings.TrimSpace(input))
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Parse error:", err)
+			continue
 		}
 
 		if len(tokens) == 1 && tokens[0] == "" {
