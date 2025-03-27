@@ -118,10 +118,13 @@ func main() {
 		}
 		command := tokens[0]
 
-		// Parse redirect
-		var outputFile *os.File
+		outputWriter := os.Stdout
+		errorWriter := os.Stderr
+		var outputFile, errorFile *os.File
+
 		for i := 0; i < len(tokens); i++ {
-			if tokens[i] == ">" || tokens[i] == "1>" {
+			switch tokens[i] {
+			case ">", "1>":
 				if i+1 >= len(tokens) {
 					fmt.Fprintln(os.Stderr, "syntax error: expected filename after", tokens[i])
 					continue
@@ -132,16 +135,24 @@ func main() {
 					fmt.Fprintln(os.Stderr, "cannot open file for writing:", err)
 					continue
 				}
-				// Remove the redirection tokens from the command
-				tokens = append(tokens[:i], tokens[i+2:]...)
-				break
+				outputWriter = outputFile
+				tokens = append(tokens[:i], tokens[i+2:]...) // remove redirect tokens
+				i -= 1                                       // step back to recheck this index
+			case "2>":
+				if i+1 >= len(tokens) {
+					fmt.Fprintln(os.Stderr, "syntax error: expected filename after", tokens[i])
+					continue
+				}
+				var err error
+				errorFile, err = os.Create(tokens[i+1])
+				if err != nil {
+					fmt.Fprintln(os.Stderr, "cannot open file for writing:", err)
+					continue
+				}
+				errorWriter = errorFile
+				tokens = append(tokens[:i], tokens[i+2:]...) // remove redirect tokens
+				i -= 1                                       // step back
 			}
-		}
-
-		// Set the output channel
-		outputWriter := os.Stdout
-		if outputFile != nil {
-			outputWriter = outputFile
 		}
 
 		switch command {
@@ -155,8 +166,13 @@ func main() {
 		case "echo":
 			fmt.Fprintln(outputWriter, strings.Join(tokens[1:], " "))
 			if outputFile != nil {
-				if err := outputFile.Close(); err != nil {
-					fmt.Fprintln(os.Stderr, "error closing output file:", err)
+				if cerr := outputFile.Close(); cerr != nil {
+					fmt.Fprintln(os.Stderr, "error closing output file:", cerr)
+				}
+			}
+			if errorFile != nil {
+				if cerr := errorFile.Close(); cerr != nil {
+					fmt.Fprintln(os.Stderr, "error closing error file:", cerr)
 				}
 			}
 		case "pwd":
@@ -165,8 +181,13 @@ func main() {
 			}
 			fmt.Fprintln(outputWriter, dir)
 			if outputFile != nil {
-				if err := outputFile.Close(); err != nil {
-					fmt.Fprintln(os.Stderr, "error closing output file:", err)
+				if cerr := outputFile.Close(); cerr != nil {
+					fmt.Fprintln(os.Stderr, "error closing output file:", cerr)
+				}
+			}
+			if errorFile != nil {
+				if cerr := errorFile.Close(); cerr != nil {
+					fmt.Fprintln(os.Stderr, "error closing error file:", cerr)
 				}
 			}
 		case "cd":
@@ -183,7 +204,7 @@ func main() {
 					dir = os.Getenv("HOME")
 				}
 			default:
-				fmt.Println("cd: too many arguments")
+				fmt.Fprintln(errorWriter, "cd: too many arguments")
 				continue
 			}
 
@@ -214,25 +235,35 @@ func main() {
 				}
 
 				if outputFile != nil {
-					if err := outputFile.Close(); err != nil {
-						fmt.Fprintln(os.Stderr, "error closing output file:", err)
+					if cerr := outputFile.Close(); cerr != nil {
+						fmt.Fprintln(os.Stderr, "error closing output file:", cerr)
+					}
+				}
+				if errorFile != nil {
+					if cerr := errorFile.Close(); cerr != nil {
+						fmt.Fprintln(os.Stderr, "error closing error file:", cerr)
 					}
 				}
 			}
 		default:
 			_, err := exec.LookPath(command)
 			if err != nil {
-				fmt.Fprintln(os.Stdout, command+": command not found")
+				fmt.Fprintln(os.Stderr, command+": command not found")
 			} else {
 				cmd := exec.Command(command, tokens[1:]...)
 				cmd.Stdout = outputWriter
-				cmd.Stderr = os.Stderr
+				cmd.Stderr = errorWriter
 
 				err := cmd.Run()
 
 				if outputFile != nil {
 					if cerr := outputFile.Close(); cerr != nil {
-						fmt.Fprintln(os.Stderr, "warning: error closing output file:", cerr)
+						fmt.Fprintln(os.Stderr, "error closing output file:", cerr)
+					}
+				}
+				if errorFile != nil {
+					if cerr := errorFile.Close(); cerr != nil {
+						fmt.Fprintln(os.Stderr, "error closing error file:", cerr)
 					}
 				}
 
