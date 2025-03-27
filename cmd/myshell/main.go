@@ -118,6 +118,32 @@ func main() {
 		}
 		command := tokens[0]
 
+		// Parse redirect
+		var outputFile *os.File
+		for i := 0; i < len(tokens); i++ {
+			if tokens[i] == ">" || tokens[i] == "1>" {
+				if i+1 >= len(tokens) {
+					fmt.Fprintln(os.Stderr, "syntax error: expected filename after", tokens[i])
+					continue
+				}
+				var err error
+				outputFile, err = os.Create(tokens[i+1])
+				if err != nil {
+					fmt.Fprintln(os.Stderr, "cannot open file for writing:", err)
+					continue
+				}
+				// Remove the redirection tokens from the command
+				tokens = append(tokens[:i], tokens[i+2:]...)
+				break
+			}
+		}
+
+		// Set the output channel
+		outputWriter := os.Stdout
+		if outputFile != nil {
+			outputWriter = outputFile
+		}
+
 		switch command {
 		case "exit":
 			if len(tokens) == 1 {
@@ -127,12 +153,22 @@ func main() {
 				os.Exit(int(exitCode))
 			}
 		case "echo":
-			fmt.Println(strings.Join(tokens[1:], " "))
+			fmt.Fprintln(outputWriter, strings.Join(tokens[1:], " "))
+			if outputFile != nil {
+				if err := outputFile.Close(); err != nil {
+					fmt.Fprintln(os.Stderr, "error closing output file:", err)
+				}
+			}
 		case "pwd":
 			dir, err := os.Getwd()
 			if err != nil {
 			}
-			fmt.Println(dir)
+			fmt.Fprintln(outputWriter, dir)
+			if outputFile != nil {
+				if err := outputFile.Close(); err != nil {
+					fmt.Fprintln(os.Stderr, "error closing output file:", err)
+				}
+			}
 		case "cd":
 			// This approach works for relative and absolute paths
 			dir := ""
@@ -166,13 +202,21 @@ func main() {
 					"cd",
 					"type",
 				}
+
 				command := tokens[1]
+
 				if slices.Contains(builtinCommands, command) {
-					fmt.Fprintln(os.Stdout, command+" is a shell builtin")
+					fmt.Fprintln(outputWriter, os.Stdout, command+" is a shell builtin")
 				} else if commandPath, err := exec.LookPath(command); err == nil {
-					fmt.Fprintln(os.Stdout, command+" is "+commandPath)
+					fmt.Fprintln(outputWriter, os.Stdout, command+" is "+commandPath)
 				} else {
-					fmt.Fprintln(os.Stdout, command+": not found")
+					fmt.Fprintln(outputWriter, os.Stdout, command+": not found")
+				}
+
+				if outputFile != nil {
+					if err := outputFile.Close(); err != nil {
+						fmt.Fprintln(os.Stderr, "error closing output file:", err)
+					}
 				}
 			}
 		default:
@@ -181,10 +225,17 @@ func main() {
 				fmt.Fprintln(os.Stdout, command+": command not found")
 			} else {
 				cmd := exec.Command(command, tokens[1:]...)
-				cmd.Stdout = os.Stdout
+				cmd.Stdout = outputWriter
 				cmd.Stderr = os.Stderr
 
 				err := cmd.Run()
+
+				if outputFile != nil {
+					if cerr := outputFile.Close(); cerr != nil {
+						fmt.Fprintln(os.Stderr, "warning: error closing output file:", cerr)
+					}
+				}
+
 				if err != nil {
 					//fmt.Fprintln(os.Stderr, err)
 				}
