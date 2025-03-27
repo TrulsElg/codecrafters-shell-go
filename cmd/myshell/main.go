@@ -23,24 +23,43 @@ func parseTokens(input string) ([]string, error) {
 	for i := 0; i < len(input); i++ {
 		ch := input[i]
 
+		// Handle single quotes — completely literal
 		if inSingleQuote {
 			if ch == '\'' {
 				inSingleQuote = false
 			} else {
-				current.WriteByte(ch) // everything is literal
+				current.WriteByte(ch)
 			}
 			continue
 		}
 
+		// Handle double quotes with limited escape support
 		if inDoubleQuote {
+			if escapeNext {
+				switch ch {
+				case '\\', '"', '$', '\n':
+					current.WriteByte(ch)
+				default:
+					current.WriteByte('\\') // preserve the backslash
+					current.WriteByte(ch)
+				}
+				escapeNext = false
+				continue
+			}
+
+			if ch == '\\' {
+				escapeNext = true
+				continue
+			}
 			if ch == '"' {
 				inDoubleQuote = false
 			} else {
-				current.WriteByte(ch) // no escape processing for now
+				current.WriteByte(ch)
 			}
 			continue
 		}
 
+		// Outside quotes
 		if escapeNext {
 			current.WriteByte(ch)
 			escapeNext = false
