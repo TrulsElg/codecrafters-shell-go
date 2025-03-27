@@ -138,6 +138,20 @@ func main() {
 				outputWriter = outputFile
 				tokens = append(tokens[:i], tokens[i+2:]...) // remove redirect tokens
 				i -= 1                                       // step back to recheck this index
+			case ">>", "1>>":
+				if i+1 >= len(tokens) {
+					fmt.Fprintln(os.Stderr, "syntax error: expected filename after", tokens[i])
+					continue
+				}
+				var err error
+				outputFile, err = os.OpenFile(tokens[i+1], os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+				if err != nil {
+					fmt.Fprintln(os.Stderr, "cannot open file for appending:", err)
+					continue
+				}
+				outputWriter = outputFile
+				tokens = append(tokens[:i], tokens[i+2:]...) // remove redirect tokens
+				i -= 1                                       // step back to recheck this index
 			case "2>":
 				if i+1 >= len(tokens) {
 					fmt.Fprintln(os.Stderr, "syntax error: expected filename after", tokens[i])
