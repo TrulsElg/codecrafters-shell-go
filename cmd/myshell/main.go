@@ -166,6 +166,20 @@ func main() {
 				errorWriter = errorFile
 				tokens = append(tokens[:i], tokens[i+2:]...) // remove redirect tokens
 				i -= 1                                       // step back
+			case "2>>":
+				if i+1 >= len(tokens) {
+					fmt.Fprintln(os.Stderr, "syntax error: expected filename after", tokens[i])
+					continue
+				}
+				var err error
+				errorFile, err = os.OpenFile(tokens[i+1], os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+				if err != nil {
+					fmt.Fprintln(os.Stderr, "cannot open error file for appending:", err)
+					continue
+				}
+				errorWriter = errorFile
+				tokens = append(tokens[:i], tokens[i+2:]...) // remove redirect tokens
+				i -= 1                                       // step back
 			}
 		}
 
