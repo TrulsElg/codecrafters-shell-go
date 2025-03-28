@@ -327,16 +327,21 @@ func handleAutocomplete(input []rune, cursorPos int) ([]rune, int) {
 		match := matches[0]
 		remaining := match[cursorPos:]
 
+		// Insert the remaining characters of the match
 		for _, r := range remaining {
 			input = append(input[:cursorPos], append([]rune{r}, input[cursorPos:]...)...)
 			cursorPos++
 		}
 
-		// Redraw line
-		restAfter := string(input[cursorPos:])
-		fmt.Print(remaining + restAfter)
+		// Insert a trailing space
+		input = append(input[:cursorPos], append([]rune{' '}, input[cursorPos:]...)...)
+		cursorPos++
 
-		// Move cursor back to correct position
+		// Redraw the rest of the input
+		restAfter := string(input[cursorPos:])
+		fmt.Print(remaining + " " + restAfter)
+
+		// Move cursor back to the correct position
 		for i := 0; i < len(restAfter); i++ {
 			fmt.Print("\x1b[D")
 		}
