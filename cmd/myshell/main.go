@@ -193,9 +193,11 @@ func handleLine(lineInput string, oldState *term.State) {
 	switch command {
 	case "exit":
 		if len(tokens) == 1 {
+			term.Restore(int(os.Stdin.Fd()), oldState)
 			os.Exit(0)
 		}
 		if exitCode, err := strconv.ParseInt(tokens[1], 10, 64); err == nil && tokens[0] == "exit" {
+			term.Restore(int(os.Stdin.Fd()), oldState)
 			os.Exit(int(exitCode))
 		}
 	case "echo":
