@@ -143,7 +143,7 @@ func handleLine(lineInput string, oldState *term.State) {
 				return
 			}
 			outputWriter = outputFile
-			tokens = append(tokens[:i], tokens[i+2:]...) // remove redirect tokens test2
+			tokens = append(tokens[:i], tokens[i+2:]...) // remove redirect tokens test3
 			i -= 1                                       // step back to recheck this index
 		case ">>", "1>>":
 			if i+1 >= len(tokens) {
