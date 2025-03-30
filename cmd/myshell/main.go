@@ -378,6 +378,10 @@ func main() {
 	var input []rune
 	var cursorPos int
 
+	var history []string
+	const maxHistory = 5
+	var historyIndex = -1
+
 	for {
 		var buf [1]byte
 		os.Stdin.Read(buf[:])
@@ -402,6 +406,16 @@ func main() {
 			}
 
 			handleLine(line, oldState)
+
+			// Save to history
+			if strings.TrimSpace(line) != "" {
+				if len(history) >= maxHistory {
+					history = history[1:] // drop oldest
+				}
+				history = append(history, line)
+			}
+			historyIndex = -1 // reset on new input
+
 			input = nil
 			cursorPos = 0
 			fmt.Printf("\r$ ")
@@ -452,9 +466,35 @@ func main() {
 			if seq[0] == '[' {
 				switch seq[1] {
 				case 'A': // Up arrow
-					// Intercept, no-op
+					if len(history) == 0 {
+						break
+					}
+					if historyIndex < len(history)-1 {
+						historyIndex++
+					}
+
+					// Replace input with history item
+					input = []rune(history[len(history)-1-historyIndex])
+					cursorPos = len(input)
+
+					// Clear line and redraw
+					fmt.Print("\r\033[2K") // clear entire line
+					fmt.Printf("$ %s", string(input))
 				case 'B': // Down arrow
-					// Intercept, no-op
+					if historyIndex <= 0 {
+						historyIndex = -1
+						input = nil
+						cursorPos = 0
+						fmt.Print("\r\033[2K$ ")
+						break
+					}
+
+					historyIndex--
+					input = []rune(history[len(history)-1-historyIndex])
+					cursorPos = len(input)
+
+					fmt.Print("\r\033[2K") // clear line
+					fmt.Printf("$ %s", string(input))
 				case 'C': // Right arrow
 					if cursorPos < len(input) {
 						cursorPos++
