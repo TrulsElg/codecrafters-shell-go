@@ -277,7 +277,7 @@ func handleLine(lineInput string, oldState *term.State) {
 	default:
 		_, err := exec.LookPath(command)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, command+": command not found")
+			fmt.Fprintf(os.Stderr, "\r%s: command not found\n", command)
 		} else {
 			term.Restore(int(os.Stdin.Fd()), oldState) // Exit raw mode
 			cmd := exec.Command(command, tokens[1:]...)
