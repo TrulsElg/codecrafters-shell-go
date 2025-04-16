@@ -14,6 +14,7 @@ import (
 const (
 	KEY_TAB       = 9
 	KEY_ENTER     = 13
+	KEY_NEWLINE   = 10
 	KEY_BACKSPACE = 127
 	KEY_CTRL_C    = 3
 	KEY_ESC       = 27
@@ -143,7 +144,7 @@ func handleLine(lineInput string, oldState *term.State) {
 				return
 			}
 			outputWriter = outputFile
-			tokens = append(tokens[:i], tokens[i+2:]...) // remove redirect tokens test3
+			tokens = append(tokens[:i], tokens[i+2:]...) // remove redirect tokens
 			i -= 1                                       // step back to recheck this index
 		case ">>", "1>>":
 			if i+1 >= len(tokens) {
@@ -277,7 +278,8 @@ func handleLine(lineInput string, oldState *term.State) {
 	default:
 		_, err := exec.LookPath(command)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "\r%s: command not found\n", command)
+			fmt.Fprintf(os.Stderr, "%s: command not found\n\r", command)
+			return
 		} else {
 			term.Restore(int(os.Stdin.Fd()), oldState) // Exit raw mode
 			cmd := exec.Command(command, tokens[1:]...)
@@ -348,11 +350,11 @@ func handleAutocomplete(input []rune, cursorPos int) ([]rune, int) {
 
 	default:
 		// Multiple matches: print suggestions on a new line
-		fmt.Print("\n") // clean new line for suggestions
+		fmt.Print("\n\r") // clean new line for suggestions
 		for _, match := range matches {
 			fmt.Print(match + " ")
 		}
-		fmt.Print("\n") // another newline to separate from prompt
+		fmt.Print("\n\r") // another newline to separate from prompt
 
 		// Redraw the prompt and user input
 		fmt.Printf("\r$ %s", string(input))
@@ -393,7 +395,7 @@ func main() {
 			term.Restore(int(os.Stdin.Fd()), oldState)
 			os.Exit(0)
 
-		case KEY_ENTER:
+		case KEY_ENTER, KEY_NEWLINE:
 			fmt.Print("\n\r")
 			line := string(input)
 
