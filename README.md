@@ -22,7 +22,7 @@ Supported Features
     
 *   **Output redirection:**
     
-    *   ```\>``` and ```>>``` (stdout)
+    *   ```>``` and ```>>``` (stdout)
         
     *   ```2>``` and ```2>>``` (stderr)
         
