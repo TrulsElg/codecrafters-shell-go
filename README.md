@@ -88,3 +88,6 @@ To launch the shell interactively:
 
 `   ./mysh   `
 
+### Supported platforms
+Tested and verified support on MacOS and Linux(Ubuntu).
+
