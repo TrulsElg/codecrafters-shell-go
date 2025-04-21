@@ -29,6 +29,7 @@ Supported Features
 *   **Interactive terminal mode:**
     
     *   Basic autocomplete
+      * Missing completions, bell sound made when no match is found
         
     *   Command history navigation (up/down arrows, limited to 5 latest commands)
         
@@ -38,10 +39,6 @@ Supported Features
 Planned Features
 ----------------
 *   **Richer autocomplete**
-  
-    *   Completion with arguments
-  
-    * Missing completions
   
     * Executable completion
   
