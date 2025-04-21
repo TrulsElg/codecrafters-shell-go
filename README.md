@@ -27,7 +27,8 @@ Supported Features
     *   ```2>``` and ```2>>``` (stderr)
         
 *   **Interactive terminal mode:**
-    
+    * Basic autocomplete
+      * Missing completions, bell sound made when no match is found
     *   Basic autocomplete
 
       *   Missing completions, bell sound made when no match is found
