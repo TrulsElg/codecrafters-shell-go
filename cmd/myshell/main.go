@@ -322,6 +322,7 @@ func handleAutocomplete(input []rune, cursorPos int) ([]rune, int) {
 	switch len(matches) {
 	case 0:
 		// No match: do nothing
+		fmt.Fprintf(os.Stdout, "\a")
 		return input, cursorPos
 
 	case 1:
