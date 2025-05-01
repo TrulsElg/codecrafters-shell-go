@@ -66,7 +66,7 @@ Build and Run
 
 ### Prerequisites
 
-*   Go installed (version 1.21 or newer recommended)
+*   Go installed (version 1.22 or newer recommended)
     
 
 ### Building
