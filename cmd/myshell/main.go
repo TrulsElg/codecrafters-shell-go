@@ -28,6 +28,12 @@ var builtinCommands = []string{
 	"type",
 }
 
+// Autocomplete cache for external commands
+var autocompleteCache = make(map[string][]string)
+var cacheOrder []string
+
+const maxCacheSize = 20
+
 // Ensures gofmt doesn't remove the "fmt" import in stage 1 (feel free to remove this!)
 var _ = fmt.Fprint
 
@@ -311,17 +317,35 @@ func handleLine(lineInput string, oldState *term.State) {
 
 func handleAutocomplete(input []rune, cursorPos int) ([]rune, int) {
 	prefix := string(input[:cursorPos])
-	matches := []string{}
+	matchesMap := make(map[string]bool)
+	var matches []string
 
 	for _, cmd := range builtinCommands {
-		if strings.HasPrefix(cmd, prefix) {
+		if strings.HasPrefix(cmd, prefix) && !matchesMap[cmd] {
 			matches = append(matches, cmd)
+			matchesMap[cmd] = true
+		}
+	}
+
+	var externalMatches []string
+	// External command matches with debounce
+	if cached, ok := autocompleteCache[prefix]; ok {
+		externalMatches = cached
+	} else {
+		externalMatches, _ = findMatchingExecutables(prefix)
+		addToAutocompleteCache(prefix, externalMatches)
+	}
+
+	for _, cmd := range externalMatches {
+		if !matchesMap[cmd] {
+			matches = append(matches, cmd)
+			matchesMap[cmd] = true
 		}
 	}
 
 	switch len(matches) {
 	case 0:
-		// No match: do nothing
+		// No match: do nothing, make bell sound
 		fmt.Fprintf(os.Stdout, "\a")
 		return input, cursorPos
 
@@ -367,6 +391,55 @@ func handleAutocomplete(input []rune, cursorPos int) ([]rune, int) {
 	}
 
 	return input, cursorPos
+}
+
+func findMatchingExecutables(prefix string) ([]string, error) {
+	pathEnv := os.Getenv("PATH")
+	dirs := strings.Split(pathEnv, ":")
+	matches := []string{}
+
+	seen := make(map[string]bool) // avoid duplicate names from different dirs
+
+	for _, dir := range dirs {
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			continue // skip unreadable directories
+		}
+
+		for _, entry := range entries {
+			name := entry.Name()
+			if !strings.HasPrefix(name, prefix) || entry.IsDir() {
+				continue
+			}
+
+			// Check executable bit
+			info, err := entry.Info()
+			if err != nil {
+				continue
+			}
+			if info.Mode()&0111 == 0 { // Not executable
+				continue
+			}
+
+			if !seen[name] {
+				matches = append(matches, name)
+				seen[name] = true
+			}
+		}
+	}
+
+	return matches, nil
+}
+
+func addToAutocompleteCache(prefix string, results []string) {
+	if len(autocompleteCache) >= maxCacheSize {
+		// Remove the oldest prefix from cache
+		oldest := cacheOrder[0]
+		cacheOrder = cacheOrder[1:]
+		delete(autocompleteCache, oldest)
+	}
+	autocompleteCache[prefix] = results
+	cacheOrder = append(cacheOrder, prefix)
 }
 
 func main() {
