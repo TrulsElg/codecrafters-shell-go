@@ -31,6 +31,7 @@ Supported Features
       * Autocompletes built-ins and executables found in $PATH
       * Lists all matches found if multiple are available
       * Missing completions, bell sound made when no match is found
+      * Progressive matching
         
     *   Command history navigation (up/down arrows, limited to 5 latest commands)
         
@@ -39,14 +40,6 @@ Supported Features
 
 Planned Features
 ----------------
-*   **Richer autocomplete**
-  
-    * Executable completion
-  
-    * Multiple completions
-  
-    *  Partial completions
-
 *  **Richer history**
   
     * Deeper history
