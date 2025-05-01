@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -26,10 +27,12 @@ var builtinCommands = []string{
 	"pwd",
 	"cd",
 	"type",
+	"sort",
 }
 
 // Autocomplete cache for external commands
 var autocompleteCache = make(map[string][]string)
+var tabPressState = make(map[string]int)
 var cacheOrder []string
 
 const maxCacheSize = 20
@@ -333,6 +336,7 @@ func handleAutocomplete(input []rune, cursorPos int) ([]rune, int) {
 		externalMatches = cached
 	} else {
 		externalMatches, _ = findMatchingExecutables(prefix)
+		sort.Strings(externalMatches)
 		addToAutocompleteCache(prefix, externalMatches)
 	}
 
@@ -374,19 +378,28 @@ func handleAutocomplete(input []rune, cursorPos int) ([]rune, int) {
 		}
 
 	default:
-		// Multiple matches: print suggestions on a new line
-		fmt.Print("\n\r") // clean new line for suggestions
-		for _, match := range matches {
-			fmt.Print(match + " ")
-		}
-		fmt.Print("\n\r") // another newline to separate from prompt
+		// Multiple matches
+		if tabPressState[prefix] == 0 {
+			// First TAB press: ring bell and record state
+			fmt.Print("\a")
+			tabPressState[prefix] = 1
+		} else {
+			// Print suggestions on a new line
+			fmt.Print("\n\r") // clean new line for suggestions
+			for _, match := range matches {
+				fmt.Print(match + "  ")
+			}
+			fmt.Print("\n\r") // another newline to separate from prompt
 
-		// Redraw the prompt and user input
-		fmt.Printf("\r$ %s", string(input))
+			// Redraw the prompt and user input
+			fmt.Printf("\r$ %s", string(input))
 
-		// Move cursor to correct position
-		for i := 0; i < len(input)-cursorPos; i++ {
-			fmt.Print("\x1b[D")
+			// Move cursor to correct position
+			for i := 0; i < len(input)-cursorPos; i++ {
+				fmt.Print("\x1b[D")
+			}
+			// Remove the state from memory
+			delete(tabPressState, prefix)
 		}
 	}
 
