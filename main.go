@@ -379,27 +379,44 @@ func handleAutocomplete(input []rune, cursorPos int) ([]rune, int) {
 
 	default:
 		// Multiple matches
-		if tabPressState[prefix] == 0 {
-			// First TAB press: ring bell and record state
-			fmt.Print("\a")
-			tabPressState[prefix] = 1
-		} else {
-			// Print suggestions on a new line
-			fmt.Print("\n\r") // clean new line for suggestions
-			for _, match := range matches {
-				fmt.Print(match + "  ")
+		lcp := longestCommonPrefix(matches)
+		if len(lcp) > len(prefix) {
+			// Progressive match found
+			remaining := lcp[len(prefix):]
+			for _, r := range remaining {
+				input = append(input[:cursorPos], append([]rune{r}, input[cursorPos:]...)...)
+				cursorPos++
 			}
-			fmt.Print("\n\r") // another newline to separate from prompt
 
-			// Redraw the prompt and user input
-			fmt.Printf("\r$ %s", string(input))
-
-			// Move cursor to correct position
-			for i := 0; i < len(input)-cursorPos; i++ {
+			rest := string(input[cursorPos:])
+			fmt.Print(remaining + rest)
+			for i := 0; i < len(rest); i++ {
 				fmt.Print("\x1b[D")
 			}
-			// Remove the state from memory
-			delete(tabPressState, prefix)
+		} else {
+			// No progressive match found
+			if tabPressState[prefix] == 0 {
+				// First TAB press: ring bell and record state
+				fmt.Print("\a")
+				tabPressState[prefix] = 1
+			} else {
+				// Print suggestions on a new line
+				fmt.Print("\n\r") // clean new line for suggestions
+				for _, match := range matches {
+					fmt.Print(match + "  ")
+				}
+				fmt.Print("\n\r") // another newline to separate from prompt
+
+				// Redraw the prompt and user input
+				fmt.Printf("\r$ %s", string(input))
+
+				// Move cursor to correct position
+				for i := 0; i < len(input)-cursorPos; i++ {
+					fmt.Print("\x1b[D")
+				}
+				// Remove the state from memory
+				delete(tabPressState, prefix)
+			}
 		}
 	}
 
@@ -453,6 +470,22 @@ func addToAutocompleteCache(prefix string, results []string) {
 	}
 	autocompleteCache[prefix] = results
 	cacheOrder = append(cacheOrder, prefix)
+}
+
+func longestCommonPrefix(strs []string) string {
+	if len(strs) == 0 {
+		return ""
+	}
+	prefix := strs[0]
+	for _, s := range strs[1:] {
+		for !strings.HasPrefix(s, prefix) {
+			if len(prefix) == 0 {
+				return ""
+			}
+			prefix = prefix[:len(prefix)-1]
+		}
+	}
+	return prefix
 }
 
 func main() {
