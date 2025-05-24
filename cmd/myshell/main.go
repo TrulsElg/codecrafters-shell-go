@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"golang.org/x/term"
+	"io"
 	"os"
 	"os/exec"
 	"slices"
@@ -133,10 +134,24 @@ func handleLine(lineInput string, oldState *term.State) {
 	if len(tokens) == 1 && tokens[0] == "" {
 		return
 	}
+
+	pipe := false
+	for _, token := range tokens {
+		if token == "|" {
+			pipe = true
+		}
+	}
+
+	if pipe {
+		fmt.Fprintln(os.Stdout, "Found a pipe")
+	} else {
+		handleCommand(tokens, oldState, os.Stdout, os.Stderr)
+	}
+}
+
+func handleCommand(tokens []string, oldState *term.State, outputWriter io.Writer, errorWriter io.Writer) {
 	command := tokens[0]
 
-	outputWriter := os.Stdout
-	errorWriter := os.Stderr
 	var outputFile, errorFile *os.File
 
 	for i := 0; i < len(tokens); i++ {
