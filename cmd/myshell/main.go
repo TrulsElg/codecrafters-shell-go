@@ -123,7 +123,7 @@ func parseTokens(input string) ([]string, error) {
 	return tokens, nil
 }
 
-func handleLine(lineInput string, oldState *term.State) {
+func handleLine(lineInput string) {
 	// Parse tokens + handle quoting and escaping
 	tokens, err := parseTokens(strings.TrimSpace(lineInput))
 	if err != nil {
@@ -145,11 +145,11 @@ func handleLine(lineInput string, oldState *term.State) {
 	if pipe {
 		fmt.Fprintln(os.Stdout, "Found a pipe")
 	} else {
-		handleCommand(tokens, oldState, os.Stdout, os.Stderr)
+		handleCommand(tokens, os.Stdout, os.Stderr)
 	}
 }
 
-func handleCommand(tokens []string, oldState *term.State, outputWriter io.Writer, errorWriter io.Writer) {
+func handleCommand(tokens []string, outputWriter io.Writer, errorWriter io.Writer) {
 	command := tokens[0]
 
 	var outputFile, errorFile *os.File
@@ -218,11 +218,9 @@ func handleCommand(tokens []string, oldState *term.State, outputWriter io.Writer
 	switch command {
 	case "exit":
 		if len(tokens) == 1 {
-			term.Restore(int(os.Stdin.Fd()), oldState)
 			os.Exit(0)
 		}
 		if exitCode, err := strconv.ParseInt(tokens[1], 10, 64); err == nil && tokens[0] == "exit" {
-			term.Restore(int(os.Stdin.Fd()), oldState)
 			os.Exit(int(exitCode))
 		}
 	case "echo":
@@ -305,15 +303,12 @@ func handleCommand(tokens []string, oldState *term.State, outputWriter io.Writer
 			fmt.Fprintf(os.Stderr, "%s: command not found\n\r", command)
 			return
 		} else {
-			term.Restore(int(os.Stdin.Fd()), oldState) // Exit raw mode
 			cmd := exec.Command(command, tokens[1:]...)
 			cmd.Stdout = outputWriter
 			cmd.Stderr = errorWriter
 			cmd.Stdin = os.Stdin
 
 			err := cmd.Run()
-
-			oldState, _ = term.MakeRaw(int(os.Stdin.Fd())) // Re-enter raw mode
 
 			if outputFile != nil {
 				if cerr := outputFile.Close(); cerr != nil {
@@ -542,7 +537,11 @@ func main() {
 				continue
 			}
 
-			handleLine(line, oldState)
+			term.Restore(int(os.Stdin.Fd()), oldState)
+
+			handleLine(line)
+
+			oldState, _ = term.MakeRaw(int(os.Stdin.Fd()))
 
 			// Save to history
 			if strings.TrimSpace(line) != "" {
