@@ -606,17 +606,17 @@ func main() {
 				continue
 			}
 
-			term.Restore(int(os.Stdin.Fd()), oldState)
-
-			handleLine(line)
-
-			oldState, _ = term.MakeRaw(int(os.Stdin.Fd()))
-
 			// Save to history
 			if strings.TrimSpace(line) != "" {
 				history = append(history, line)
 			}
 			historyIndex = -1 // reset on new input
+
+			term.Restore(int(os.Stdin.Fd()), oldState)
+
+			handleLine(line)
+
+			oldState, _ = term.MakeRaw(int(os.Stdin.Fd()))
 
 			input = nil
 			cursorPos = 0
