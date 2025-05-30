@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 // Key constants (raw terminal mode input)
@@ -135,21 +136,72 @@ func handleLine(lineInput string) {
 		return
 	}
 
-	pipe := false
-	for _, token := range tokens {
-		if token == "|" {
-			pipe = true
+	// split tokens into commands on every "|"
+	var cmds [][]string
+	start := 0
+	for i, tk := range tokens {
+		if tk == "|" {
+			if i == start {
+				fmt.Fprintln(os.Stderr, "syntax error: empty command")
+				return
+			}
+			cmds = append(cmds, tokens[start:i])
+			start = i + 1
 		}
 	}
-
-	if pipe {
-		fmt.Fprintln(os.Stdout, "Found a pipe")
+	if start < len(tokens) {
+		cmds = append(cmds, tokens[start:])
+	}
+	if len(cmds) == 0 {
+		return // nothing to run
+	}
+	if len(cmds) == 1 {
+		// no pipes
+		handleCommand(cmds[0], os.Stdin, os.Stdout, os.Stderr)
 	} else {
-		handleCommand(tokens, os.Stdout, os.Stderr)
+		runMultiPipeline(cmds)
 	}
 }
 
-func handleCommand(tokens []string, outputWriter io.Writer, errorWriter io.Writer) {
+func runMultiPipeline(cmds [][]string) {
+	n := len(cmds)
+	// prepare n-1 in-memory pipes
+	readers := make([]*io.PipeReader, n-1)
+	writers := make([]*io.PipeWriter, n-1)
+	for i := 0; i < n-1; i++ {
+		readers[i], writers[i] = io.Pipe()
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(n)
+
+	for i, argv := range cmds {
+		// determine stdin/stdout for this segment
+		var in io.Reader = os.Stdin
+		var out io.Writer = os.Stdout
+
+		if i > 0 {
+			in = readers[i-1]
+		}
+		if i < n-1 {
+			out = writers[i]
+		}
+
+		go func(args []string, r io.Reader, w io.Writer) {
+			defer wg.Done()
+			// call your unified handler; errors go to os.Stderr
+			handleCommand(args, r, w, os.Stderr)
+			// closing the writer signals EOF to the next stage
+			if pw, ok := w.(*io.PipeWriter); ok {
+				pw.Close()
+			}
+		}(argv, in, out)
+	}
+
+	wg.Wait()
+}
+
+func handleCommand(tokens []string, inputReader io.Reader, outputWriter io.Writer, errorWriter io.Writer) {
 	command := tokens[0]
 
 	var outputFile, errorFile *os.File
@@ -306,7 +358,7 @@ func handleCommand(tokens []string, outputWriter io.Writer, errorWriter io.Write
 			cmd := exec.Command(command, tokens[1:]...)
 			cmd.Stdout = outputWriter
 			cmd.Stderr = errorWriter
-			cmd.Stdin = os.Stdin
+			cmd.Stdin = inputReader
 
 			err := cmd.Run()
 
