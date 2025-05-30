@@ -23,6 +23,10 @@ const (
 	KEY_ESC       = 27
 )
 
+const initialMaxHistory = 512
+
+var history = make([]string, 0, initialMaxHistory)
+
 var builtinCommands = []string{
 	"exit",
 	"echo",
@@ -355,6 +359,15 @@ func handleCommand(tokens []string, inputReader io.Reader, outputWriter io.Write
 				}
 			}
 		}
+	case "history":
+		for i, cmd := range history {
+			fmt.Fprintf(outputWriter, "%5d  %s\n", i+1, cmd)
+		}
+		if outputFile != nil {
+			if cerr := outputFile.Close(); cerr != nil {
+				fmt.Fprintln(os.Stderr, "error closing output file:", cerr)
+			}
+		}
 	default:
 		_, err := exec.LookPath(command)
 		if err != nil {
@@ -568,8 +581,6 @@ func main() {
 	var input []rune
 	var cursorPos int
 
-	const maxHistory = 512
-	history := make([]string, 0, maxHistory)
 	historyIndex := -1
 
 	for {
