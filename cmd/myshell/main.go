@@ -568,9 +568,9 @@ func main() {
 	var input []rune
 	var cursorPos int
 
-	var history []string
-	const maxHistory = 5
-	var historyIndex = -1
+	const maxHistory = 512
+	history := make([]string, 0, maxHistory)
+	historyIndex := -1
 
 	for {
 		var buf [1]byte
@@ -603,9 +603,6 @@ func main() {
 
 			// Save to history
 			if strings.TrimSpace(line) != "" {
-				if len(history) >= maxHistory {
-					history = history[1:] // drop oldest
-				}
 				history = append(history, line)
 			}
 			historyIndex = -1 // reset on new input
