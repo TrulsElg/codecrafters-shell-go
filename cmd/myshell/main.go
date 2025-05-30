@@ -30,6 +30,7 @@ var builtinCommands = []string{
 	"cd",
 	"type",
 	"sort",
+	"history",
 }
 
 // Autocomplete cache for external commands
