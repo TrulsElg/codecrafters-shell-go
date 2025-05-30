@@ -360,8 +360,28 @@ func handleCommand(tokens []string, inputReader io.Reader, outputWriter io.Write
 			}
 		}
 	case "history":
-		for i, cmd := range history {
-			fmt.Fprintf(outputWriter, "%5d  %s\n", i+1, cmd)
+		count := len(history)
+		start := 0
+
+		if len(tokens) > 1 {
+			n, err := strconv.Atoi(tokens[1])
+			if err != nil || n <= 1 {
+				fmt.Fprintf(errorWriter, "history: %q: invalid number of entries\n", tokens[1])
+				// close any redirection files
+				if outputFile != nil {
+					if cerr := outputFile.Close(); cerr != nil {
+						fmt.Fprintln(os.Stderr, "error closing output file:", cerr)
+					}
+				}
+				return
+			}
+			if n < count {
+				start = count - n
+			}
+		}
+
+		for i := start; i < count; i++ {
+			fmt.Fprintf(outputWriter, "%5d  %s\n", i+1, history[i])
 		}
 		if outputFile != nil {
 			if cerr := outputFile.Close(); cerr != nil {
