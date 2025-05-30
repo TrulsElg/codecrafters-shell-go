@@ -191,9 +191,14 @@ func runMultiPipeline(cmds [][]string) {
 			defer wg.Done()
 			handleCommand(args, r, w, os.Stderr)
 
-			// closing the writer signals EOF to the next stage
+			// Close write-end → signals EOF downstream
 			if pw, ok := w.(*io.PipeWriter); ok {
 				pw.Close()
+			}
+
+			// Close read-end  → signals EOF/upstream writer
+			if pr, ok := r.(*io.PipeReader); ok {
+				pr.Close()
 			}
 		}(argv, in, out)
 	}
