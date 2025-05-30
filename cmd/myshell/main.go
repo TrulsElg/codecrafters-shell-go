@@ -189,8 +189,8 @@ func runMultiPipeline(cmds [][]string) {
 
 		go func(args []string, r io.Reader, w io.Writer) {
 			defer wg.Done()
-			// call your unified handler; errors go to os.Stderr
 			handleCommand(args, r, w, os.Stderr)
+
 			// closing the writer signals EOF to the next stage
 			if pw, ok := w.(*io.PipeWriter); ok {
 				pw.Close()
