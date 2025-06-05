@@ -20,6 +20,8 @@ const (
 	KEY_NEWLINE   = 10
 	KEY_BACKSPACE = 127
 	KEY_CTRL_C    = 3
+	KEY_CTRL_A    = 1
+	KEY_CTRL_E    = 5
 	KEY_ESC       = 27
 )
 
@@ -729,6 +731,25 @@ func main() {
 					}
 				}
 			}
+
+		case KEY_CTRL_A:
+			cursorPos = 0
+
+			//    "\r\033[2K" is: carriage-return, then ANSI “clear entire line”.
+			fmt.Print("\r\033[2K")
+			fmt.Printf("$ %s", string(input))
+
+			// Move cursor back to start after re-printing the line
+			for i := 0; i < len(input); i++ {
+				fmt.Print("\x1b[D")
+			}
+
+		case KEY_CTRL_E:
+			cursorPos = len(input)
+
+			// Clear the line and redraw “$ <full input>”
+			fmt.Print("\r\033[2K")
+			fmt.Printf("$ %s", string(input))
 
 		default:
 			chRune := rune(ch)
